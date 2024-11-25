@@ -2,36 +2,39 @@ package socketapp;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class MySocketServer {
+public class MySocketClient {
+    private static Socket socket;
+    private static boolean connectionState = false;
+
     public static void main(String[] args) {
+        connect();
+        if (connectionState == true) {
+            new Thread(new ClientListen(socket)).start();
+            new Thread(new ClientSend(socket)).start();
+        }
+    }
+
+    // 尝试连接到服务器
+    static void connect() {
         try {
-            // 创建一个 socket 服务器
-            ServerSocket serverSocket = new ServerSocket(11451);
-
-            while (true) {
-                // 服务器等待并接收客户端请求
-                Socket socket = serverSocket.accept();
-                // 创建线程收发信息
-                new Thread(new ServerListen(socket)).start();
-                new Thread(new ServerSend(socket)).start();
-            }
-
+            socket = new Socket("127.0.0.1", 11451);
+            connectionState = true;
         } catch (Exception e) {
+            connectionState = false;
             e.printStackTrace();
         }
     }
 }
 
-// 服务端监听客户端发来的消息
-class ServerListen implements Runnable {
+// 客户端监听服务端发来的消息
+class ClientListen implements Runnable {
     private Socket socket;
 
     // 构造函数
-    public ServerListen(Socket socket) {
+    public ClientListen(Socket socket) {
         this.socket = socket;
     }
 
@@ -56,13 +59,13 @@ class ServerListen implements Runnable {
     }
 }
 
-// 服务器发送给客户端消息
-class ServerSend implements Runnable {
+// 客户端发送给服务端消息
+class ClientSend implements Runnable {
     // 覆写 run 方法
     private Socket socket;
 
     // 构造函数
-    public ServerSend(Socket socket) {
+    public ClientSend(Socket socket) {
         this.socket = socket;
     }
 
@@ -72,7 +75,7 @@ class ServerSend implements Runnable {
             ObjectOutputStream oss = new ObjectOutputStream(socket.getOutputStream());
             Scanner scanner = new Scanner(System.in);
             while (true) {
-                oss.writeObject("aaa");
+                oss.writeObject("bbb");
                 oss.flush();
             }
         } catch (Exception e) {
