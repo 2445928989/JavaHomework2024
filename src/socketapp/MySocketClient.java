@@ -12,6 +12,7 @@ public class MySocketClient {
     public static void main(String[] args) {
         connect();
         if (connectionState == true) {
+            System.out.println("已成功连接到服务器！");
             new Thread(new ClientListen(socket)).start();
             new Thread(new ClientSend(socket)).start();
         }
@@ -73,9 +74,10 @@ class ClientSend implements Runnable {
     public void run() {
         try {
             ObjectOutputStream oss = new ObjectOutputStream(socket.getOutputStream());
-            Scanner scanner = new Scanner(System.in);
+            Scanner scanner = new Scanner(System.in, "gbk");
             while (true) {
-                oss.writeObject("bbb");
+                String string = scanner.nextLine();
+                oss.writeObject(string);
                 oss.flush();
             }
         } catch (Exception e) {
