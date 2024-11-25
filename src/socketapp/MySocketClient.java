@@ -46,7 +46,8 @@ class ClientListen implements Runnable {
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             // 监听消息
             while (true) {
-                System.out.println(ois.readObject());
+                // 输出消息
+                System.out.println("来自服务端的消息：" + ois.readObject());
             }
         } catch (Exception e) {
             e.printStackTrace();
