@@ -7,14 +7,11 @@ import com.example.frontend.Window;
 
 public class ServerReaderThread extends Thread {
     private Socket socket;
-    private BufferedReader br;
-    private BufferedWriter bw;
-
+    private BufferedInputStream bis;
     public ServerReaderThread(Socket socket) {
         this.socket = socket;
         try {
-            br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            bis = new BufferedInputStream(socket.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -25,19 +22,26 @@ public class ServerReaderThread extends Thread {
         String msg;
         while (true) {
             try {
-                msg = br.readLine();
-                if (msg == null) {
-                    break; // 客户端断开连接
+//                msg = br.readLine();
+//                if (msg == null) {
+//                    break; // 客户端断开连接
+//                }
+//                System.out.println(socket.getRemoteSocketAddress() + "：" + msg);
+//                // 把这个消息分发给全部客户端进行接收
+//                sendMsgToAll(msg);
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+
+                while ((bytesRead = bis.read(buffer)) != -1) {
+                    // 将字节数组转换为字符串并打印
+                    String data = new String(buffer, 0, bytesRead,"utf-8");
+                    System.out.println(data);
                 }
-                System.out.println(socket.getRemoteSocketAddress() + "：" + msg);
-                // 把这个消息分发给全部客户端进行接收
-                sendMsgToAll(msg);
             } catch (IOException e) {
                 try {
                     System.out.println(socket.getRemoteSocketAddress() + " 下线了");
                     Server.onLineSockets.remove(socket);
-                    br.close();
-                    bw.close();
+                    bis.close();
                     socket.close();
                     break;
                 } catch (IOException ex) {

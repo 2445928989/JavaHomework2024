@@ -1,17 +1,22 @@
 package com.example.backend;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.Socket;
 import com.example.frontend.*;
 
 public class ClientReaderThread extends Thread {
-    private BufferedReader br;
+    private Socket socket;
+    private Boolean isConnected = false;
+    private BufferedInputStream bis;
     private Window clientWindow;
 
-    public ClientReaderThread(BufferedReader br, Window clientWindow) {
-        this.br = br;
+    public ClientReaderThread(Socket socket, BufferedInputStream bis, Window clientWindow) {
+        this.socket = socket;
+        this.bis = bis;
         this.clientWindow = clientWindow;
+
     }
 
     @Override
@@ -19,11 +24,17 @@ public class ClientReaderThread extends Thread {
         String line = null;
         while (true) {
             try {
-                if ((line = br.readLine()) != null) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+
+                while ((bytesRead = bis.read(buffer)) != -1) {
+                    // 将字节数组转换为字符串并打印
+                    String data = new String(buffer, 0, bytesRead,"utf-8");
                     clientWindow.jta.append(line + System.lineSeparator());
                 }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                if(socket.isClosed())return;
+                else e.printStackTrace();
             }
         }
     }
