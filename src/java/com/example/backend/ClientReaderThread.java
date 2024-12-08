@@ -3,22 +3,20 @@ package com.example.backend;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.Socket;
 import com.example.frontend.*;
 
 public class ClientReaderThread extends Thread {
     private Socket socket;
-    private Boolean isConnected = false;
-    private BufferedInputStream bis;
+    private ObjectInputStream bis;
     private Window clientWindow;
 
-    public ClientReaderThread(Socket socket, BufferedInputStream bis, Window clientWindow) {
+    public ClientReaderThread(Socket socket, ObjectInputStream bis, Window clientWindow) {
         this.socket = socket;
         this.bis = bis;
         this.clientWindow = clientWindow;
-
     }
-
     @Override
     public void run() {
         String line = null;

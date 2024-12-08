@@ -14,12 +14,13 @@ public class Client implements ActionListener, KeyListener {
 
     // 属性
     private Account account = null;
-
     private Boolean isConnected = false;
     private Window clientWindow;
     private Socket socket;
-    private BufferedOutputStream bos = null;
-    private BufferedInputStream bis = null;
+    private ObjectOutputStream bos = null;
+    private ObjectInputStream bis = null;
+    private Thread readerThread = null;
+    private Thread writerThread = null;
     // 构造方法
     public Client(String host, int port) throws IOException {
         // 建立窗口
@@ -71,7 +72,7 @@ public class Client implements ActionListener, KeyListener {
             return;
         }
 
-        bos = new BufferedOutputStream(socket.getOutputStream());
+        bos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
 
         sendFileToSocket("D:\\C++\\11.txt");
         // 给发送按钮绑定一个监听点击事件
@@ -81,17 +82,18 @@ public class Client implements ActionListener, KeyListener {
 
         // 3、收数据（在子线程中进行）
         // 输入流包装
-        bis = new BufferedInputStream(new BufferedInputStream(socket.getInputStream()));
-        Thread readerThread = new ClientReaderThread(socket, bis, clientWindow);
+        bis =new ObjectInputStream(new BufferedInputStream(new BufferedInputStream(socket.getInputStream())));
+        readerThread = new ClientReaderThread(socket, bis, clientWindow);
         readerThread.start();
     }
 
     private void sendDataToSocket() throws IOException {
-        String text = clientWindow.jtf.getText();
-        text = "客户端：" + text;
-        clientWindow.jta.append(text + System.lineSeparator());// 将输出内容展示在文本域（分行）
 
-        bos.write(text.getBytes("utf-8"),0,text.getBytes("utf-8").length);
+
+        String text = clientWindow.jtf.getText();
+        clientWindow.jta.append(text + System.lineSeparator());// 将输出内容展示在文本域（分行）
+        Message message = new Message(account.getAccountId(),DetinationType.USER,0,MessageType.TEXT,text);
+        writerThread = new ClientWriterThread(socket,bos,clientWindow,message);
         bos.flush();// 强制将缓冲区中的数据立即写入目的地，并清空缓冲区
         clientWindow.jtf.setText("");
     }
