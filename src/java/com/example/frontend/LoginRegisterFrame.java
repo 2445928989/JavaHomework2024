@@ -1,6 +1,6 @@
-package frontend;
+package com.example.frontend;
 
-import backend.Client;
+import com.example.backend.Client;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -51,6 +51,7 @@ public class LoginRegisterFrame {
                 String password = new String(passwordField.getPassword());
                 if (client.login(username, password)) {
                     // 登录成功，关闭登录窗口，打开聊天窗口
+                    System.out.println("登陆成功");
                     frame.dispose();
                     client.openChatWindow(username);
                 } else {

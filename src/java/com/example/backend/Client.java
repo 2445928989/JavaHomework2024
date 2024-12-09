@@ -1,148 +1,138 @@
 package com.example.backend;
 
-import com.example.frontend.*;
-import java.awt.event.*;
+import com.example.frontend.LoginRegisterFrame;
+import com.example.frontend.Window;
+
+import java.awt.*;
 import java.io.*;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import javax.swing.*;
 
-public class Client implements ActionListener, KeyListener {
-    public static void main(String[] args) throws IOException {
-        new Client("127.0.0.1", 8999);
+import static java.lang.Math.random;
+
+public class Client {
+    public static void main(String[] args) {
+        new Client();
     }
 
-    // 属性
+    // 客户端套接字
     private Account account = null;
     private Boolean isConnected = false;
-    private Window clientWindow;
+    private Window window;
     private Socket socket;
-    private ObjectOutputStream bos = null;
-    private ObjectInputStream bis = null;
     private Thread readerThread = null;
     private Thread writerThread = null;
-    // 构造方法
-    public Client(String host, int port) throws IOException {
-        // 建立窗口
-        clientWindow = new Window();
-        clientWindow.setTitle("客户端");
-        // 生成随机位置
-        Random random = new Random();
-        clientWindow.setLocation(random.nextInt(800), random.nextInt(600));
-        clientWindow.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                // 在关闭窗口时，释放资源
-                try {
-                    if (bos != null) {
-                        bos.close();
-                    }
-                    if (bos != null) {
-                        bos.close();
-                    }
-                    if (socket != null && !socket.isClosed()) {
-                        socket.close();
-                        isConnected = false;
-                    }
-                } catch (IOException ex) {
-                    System.out.println("退出成功！" + socket.getRemoteSocketAddress() + "自己下线了");
-                }
-            }
-        });
-
-        int tryTimes = 0;
-        int maxTryTimes = 10;
-        while (!isConnected && tryTimes < maxTryTimes) {
-            try {
-                tryTimes++;
-                socket = new Socket(host, port);
-                isConnected = true;
-            } catch (Exception e) {
-                isConnected = false;
-                System.out.println("未成功连接到服务器，正在尝试重新连接...");
-                try {
-                    Thread.sleep(1 * 1000);
-                } catch (Exception e1) {
-                    e1.printStackTrace();
-                }
-            }
-        }
-        if (tryTimes == maxTryTimes) {
-            System.out.println("尝试重连次数已达到最大值");
-            return;
-        }
-
-        bos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-
-        sendFileToSocket("D:\\C++\\11.txt");
-        // 给发送按钮绑定一个监听点击事件
-        clientWindow.jb.addActionListener(this);
-        // 给文本框绑定一个键盘点击事件
-        clientWindow.jtf.addKeyListener(this);
-
-        // 3、收数据（在子线程中进行）
-        // 输入流包装
-        bis =new ObjectInputStream(new BufferedInputStream(new BufferedInputStream(socket.getInputStream())));
-        readerThread = new ClientReaderThread(socket, bis, clientWindow);
-        readerThread.start();
-    }
-
-    private void sendDataToSocket() throws IOException {
-
-
-        String text = clientWindow.jtf.getText();
-        clientWindow.jta.append(text + System.lineSeparator());// 将输出内容展示在文本域（分行）
-        Message message = new Message(account.getAccountId(),DetinationType.USER,0,MessageType.TEXT,text);
-        writerThread = new ClientWriterThread(socket,bos,clientWindow,message);
-        bos.flush();// 强制将缓冲区中的数据立即写入目的地，并清空缓冲区
-        clientWindow.jtf.setText("");
-    }
-
-    private void sendFileToSocket(String path) {
+    private BlockingQueue<Message> queue = new LinkedBlockingQueue<>(32);//消息队列
+    public Client() {
+        // 启动登录注册流程
         try {
-            FileInputStream fis = new FileInputStream(path);
-            BufferedInputStream bfis = new BufferedInputStream(fis);
-            System.out.println("try to send a file");
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = bfis.read(buffer)) != -1) {
-                bos.write(buffer, 0, bytesRead);
+             //创建并显示“正在连接到服务器...”的对话框
+             JDialog connectingDialog;
+             connectingDialog = new JDialog(null, "提示", Dialog.ModalityType.MODELESS);
+             connectingDialog.setContentPane(new JLabel("正在连接到服务器..."));
+             connectingDialog.pack();
+             connectingDialog.setLocationRelativeTo(null);
+             connectingDialog.setVisible(true);
+            int tryTimes = 0;
+            int maxTryTimes = 10;
+            while (!isConnected && tryTimes < maxTryTimes) {
+                try {
+                    tryTimes++;
+                    this.socket = new Socket("127.0.0.1", 8888);
+                    isConnected = true;
+                } catch (Exception e) {
+                    isConnected = false;
+                    System.out.println("未成功连接到服务器，正在尝试重新连接...");
+                    try {
+                        Thread.sleep(1 * 1000);
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
+                }
             }
-            System.out.println("send over");
-            bos.flush();
-            bfis.close();
-            fis.close();
-        }
-        catch (Exception e) {
+
+            SwingUtilities.invokeLater(() -> connectingDialog.dispose());
+
+            if (tryTimes == maxTryTimes) {
+                System.out.println("尝试重连次数已达到最大值");
+                JOptionPane.showMessageDialog(null, "无法连接到服务器，请检查您的网络连接！", "错误", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            System.out.println("成功连接到服务器");
+
+            // 启动接收服务器消息的线程
+            writerThread = new ClientWriterThread(socket,window,queue);
+            writerThread.start();
+            System.out.println("启动发信线程成功");
+            Random randomConnectId = new Random();
+            int connectId = randomConnectId.nextInt();
+            queue.add(new Message(connectId,null,0,MessageType.LAUNCH,socket.getLocalAddress()+":"+socket.getLocalPort()));
+
+            readerThread = new ClientReaderThread(socket, window);
+            readerThread.start();
+            System.out.println("启动收信线程成功");
+
+            new LoginRegisterFrame(this);
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    @Override
-    public void actionPerformed(ActionEvent e) {
+
+    // 登录方法（这里只是模拟，实际应该与服务器交互验证）
+    public boolean login(String username, String password) {
+        // 这里可以添加与服务器通信验证登录的逻辑
+        return true;
+    }
+
+    // 注册方法（这里只是模拟，实际应该与服务器交互注册用户）
+    public boolean register(String username, String password) {
+        // 这里可以添加与服务器通信注册用户的逻辑
+        return true;
+    }
+
+    // 打开聊天窗口
+    public void openChatWindow(String username) {
         try {
-            sendDataToSocket();
+            // 发送上线消息到服务
+
+            window = new Window(this);
+            System.out.println("创建主窗口成功");
+            window.setVisible(true);
+            System.out.println("主窗口已显示");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 发送消息到服务器
+    public void sendMessageToServer(String message, String chatType, String chatTarget) {
+
+    }
+
+    // 发送文件到服务器
+    public void sendFileToServer(File file, String chatType, String chatTarget) {
+
+    }
+
+    // 发送图片到服务器
+    public void sendPictureToServer(File picture, String chatType, String chatTarget) {
+
+    }
+
+    public void sendExitToServer() {
+
+    }
+
+    // 关闭与服务器的连接
+    public void closeConnection() {
+        try {
+            socket.close();
         } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            ex.printStackTrace();
         }
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-        // 回车键
-        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-            try {
-                sendDataToSocket();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e) {
     }
 }

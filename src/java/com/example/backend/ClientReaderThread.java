@@ -10,29 +10,31 @@ import com.example.frontend.*;
 public class ClientReaderThread extends Thread {
     private Socket socket;
     private ObjectInputStream bis;
-    private Window clientWindow;
+    private Window window;
 
-    public ClientReaderThread(Socket socket, ObjectInputStream bis, Window clientWindow) {
+    public ClientReaderThread(Socket socket, Window window) {
         this.socket = socket;
-        this.bis = bis;
-        this.clientWindow = clientWindow;
+        this.window = window;
+        try{
+            bis = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     @Override
     public void run() {
-        String line = null;
         while (true) {
             try {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-
-                while ((bytesRead = bis.read(buffer)) != -1) {
-                    // 将字节数组转换为字符串并打印
-                    String data = new String(buffer, 0, bytesRead,"utf-8");
-                    clientWindow.jta.append(line + System.lineSeparator());
-                }
-            } catch (IOException e) {
+                Message message = (Message) bis.readObject();
+                System.out.println(message.toString());
+            } catch (Exception e) {
                 if(socket.isClosed())return;
                 else e.printStackTrace();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         }
     }

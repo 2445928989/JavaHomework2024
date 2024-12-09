@@ -1,40 +1,36 @@
 package com.example.backend;
 
-import com.example.frontend.Window;
-
 import java.io.BufferedOutputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
-public class ClientWriterThread extends Thread {
-    private Socket socket;
+public class ServerWriterThread extends Thread {
     private ObjectOutputStream oos;
-    private Window clientWindow;
+    private Socket socket;
     private BlockingQueue<Message> queue;
-    ClientWriterThread(Socket socket, Window clientWindow, BlockingQueue<Message> queue) {
+    ServerWriterThread(Socket socket , BlockingQueue<Message> queue) {
         this.socket = socket;
-        this.clientWindow = clientWindow;
         this.queue = queue;
         try{
-            oos = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-            oos.flush();
+            oos=new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
-
     @Override
     public void run() {
         try {
             while (true) {
-                Message message = queue.take(); // 阻塞直到获取到消息
+                Message message = queue.peek(); // 阻塞直到获取到消息
+                if(message.getDestinationId()==)
                 oos.writeObject(message);
                 oos.flush();
                 System.out.println("Sent message: " + message.getContent());
             }
-        }catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }

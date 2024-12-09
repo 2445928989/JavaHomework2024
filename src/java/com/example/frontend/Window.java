@@ -1,12 +1,10 @@
-package frontend;
+package com.example.frontend;
 
-import backend.Client;
+import com.example.backend.Client;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -225,7 +223,7 @@ public class Window extends JFrame {
     }
 
     // 接收服务器消息并显示在聊天窗口
-    public void receiveMessageFromServer(String message) {
+    public void appendMessage(String message) {
         messageArea.append(message + "\n");
     }
 
